@@ -378,8 +378,11 @@ io.on('connection', (socket) => {
 
         player.x = Math.max(50, Math.min(WORLD_WIDTH - 50, data.x));
         player.y = Math.max(50, Math.min(WORLD_HEIGHT - 50, data.y));
-        player.vx = data.vx;
-        player.vy = data.vy;
+        // Server cập nhật vị trí dựa trên velocity
+player.vx = data.vx || 0;
+player.vy = data.vy || 0;
+player.x += player.vx;  // Server tính toán
+player.y += player.vy;
         player.facingLeft = data.facingLeft;
     });
 
