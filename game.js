@@ -66,7 +66,7 @@ const characterImages = [
 ];
 
 // Boss image - THAY ẢNH NÀY BẰNG ẢNH BOSS CỦA BẠN
-const bossImageUrl = 'https://pfst.cf2.poecdn.net/base/image/aa44c494b1cc58fad5dde0729346378098b2277ac6d2cff55ec584965314d597?w=350&h=338';
+const bossImageUrl = 'https://i.postimg.cc/2yPcjg8v/Picsart-25-11-10-12-20-10-652.png';
 
 // Bullet animations
 const bulletAnimations = {
