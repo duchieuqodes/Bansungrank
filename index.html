@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sky Shooter - Multiplayer Battle Royale</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            touch-action: none;
+        }
+
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #gameCanvas {
+            display: none;
+            width: 100%;
+            height: 100%;
+            background: #1a1a2e;
+        }
+
+        /* Lobby Screen */
+        #lobbyScreen {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .lobby-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #roomsList {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .room-item {
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .room-info {
+            flex: 1;
+        }
+
+        .room-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .room-players {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .btn-join {
+            padding: 8px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Character Selection Screen */
+        #characterSelect {
+            display: none;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .select-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .characters-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+        }
+
+        .character-card {
+            background: white;
+            border-radius: 20px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 4px solid transparent;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .character-card:active {
+            transform: scale(0.95);
+        }
+
+        .character-card.selected {
+            border-color: #ffd700;
+            box-shadow: 0 0 30px rgba(255,215,0,0.8);
+            transform: scale(1.05);
+        }
+
+        .character-name {
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .character-ability {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            padding: 5px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+
+        .start-button {
+            padding: 18px 60px;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+
+        .start-button:active {
+            transform: scale(0.95);
+        }
+
+        .start-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Game UI */
+        #gameUI {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #topBar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        #statsDisplay {
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.5);
+            padding: 10px 15px;
+            border-radius: 10px;
+        }
+
+        #timerDisplay {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+
+        #healthBar {
+            position: absolute;
+            bottom: 200px;
+            left: 20px;
+            width: 200px;
+            height: 30px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid white;
+        }
+
+        #healthFill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b 0%, #ee5a6f 100%);
+            transition: width 0.3s;
+        }
+
+        #armorBar {
+            position: absolute;
+            bottom: 165px;
+            left: 20px;
+            width: 200px;
+            height: 20px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #4ecdc4;
+            display: none;
+        }
+
+        #armorFill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4 0%, #45b7d1 100%);
+            transition: width 0.3s;
+        }
+
+        #cooldownDisplay {
+            position: absolute;
+            bottom: 140px;
+            left: 20px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.5);
+            padding: 8px 15px;
+            border-radius: 10px;
+        }
+
+        /* Virtual Controls */
+        .virtual-joystick {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 150px;
+            height: 150px;
+            pointer-events: auto;
+        }
+
+        .joystick-base {
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.2);
+            border: 3px solid rgba(255,255,255,0.5);
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .joystick-stick {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.8);
+            border: 3px solid white;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.1s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .controls-right {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .shoot-button, .special-button {
+            width: 100px;
+            height: 100px;
+            border: 4px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            user-select: none;
+        }
+
+        .shoot-button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .special-button {
+            background: linear-gradient(135deg, #ffd700 0%, #ff6b35 100%);
+        }
+
+        .shoot-button:active, .special-button:active {
+            transform: scale(0.9);
+        }
+
+        .special-button.cooldown {
+            opacity: 0.5;
+            background: #666;
+        }
+
+        /* Game Over Screen */
+        #gameOverScreen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .game-over-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .game-over-title {
+            font-size: 36px;
+            font-weight: bold;
+            color: #f5576c;
+            margin-bottom: 20px;
+        }
+
+        .leaderboard {
+            margin: 20px 0;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin: 5px 0;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+
+        .leaderboard-item.top1 {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            font-weight: bold;
+        }
+
+        .leaderboard-item.top2 {
+            background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+        }
+
+        .leaderboard-item.top3 {
+            background: linear-gradient(135deg, #cd7f32 0%, #daa06d 100%);
+        }
+
+        .restart-button {
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            margin-top: 20px;
+        }
+
+        /* Room Waiting Screen */
+        #roomWaitingScreen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+
+        .waiting-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .waiting-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .players-list {
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .player-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .player-item.owner {
+            background: #ffd700;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Lobby Screen -->
+        <div id="lobbyScreen">
+            <h1 class="lobby-title">🚀 SKY SHOOTER 🚀</h1>
+
+            <div class="input-group">
+                <label>Tên người chơi:</label>
+                <input type="text" id="playerNameInput" placeholder="Nhập tên của bạn..." maxlength="15">
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" id="createRoomBtn">Tạo phòng</button>
+                <button class="btn btn-secondary" id="refreshRoomsBtn">Làm mới</button>
+            </div>
+
+            <div id="roomsList">
+                <p style="text-align: center; color: #666;">Đang tải danh sách phòng...</p>
+            </div>
+        </div>
+
+        <!-- Room Waiting Screen -->
+        <div id="roomWaitingScreen">
+            <div class="waiting-content">
+                <div class="waiting-title">Phòng chờ</div>
+                <div id="roomCode" style="font-size: 20px; font-weight: bold; color: #333; margin-bottom: 15px;"></div>
+                <div class="players-list" id="playersListWaiting"></div>
+                <button class="btn btn-primary" id="startGameBtn" style="display: none; width: 100%; margin-top: 20px;">BẮT ĐẦU TRẬN ĐẤU</button>
+                <button class="btn btn-secondary" id="leaveRoomBtn" style="width: 100%; margin-top: 10px;">RỜI PHÒNG</button>
+            </div>
+        </div>
+
+        <!-- Character Selection Screen -->
+        <div id="characterSelect">
+            <h1 class="select-title">CHỌN NHÂN VẬT</h1>
+
+            <div class="characters-grid">
+                <div class="character-card" data-character="0">
+                    <div class="character-name">🧙‍♀️ Phù Thủy - POISON</div>
+                    <div class="character-ability">
+                        <strong>Chiêu đặc biệt:</strong> Độc tính - Gây sát thương liên tục trong 3s<br>
+                        <strong>Chiêu thường:</strong> Đạn độc - Trừ máu dần 2s
+                    </div>
+                </div>
+
+                <div class="character-card" data-character="1">
+                    <div class="character-name">⚡ Phi Thuyền - ELECTRIC</div>
+                    <div class="character-ability">
+                        <strong>Chiêu đặc biệt:</strong> Sốc điện - Choáng 3s, không thể bắn<br>
+                        <strong>Chiêu thường:</strong> Điện giật nhẹ - Choáng 1s
+                    </div>
+                </div>
+
+                <div class="character-card" data-character="2">
+                    <div class="character-name">🔥 Phi Công - FIRE</div>
+                    <div class="character-ability">
+                        <strong>Chiêu đặc biệt:</strong> Hỏa ngục - x3 sát thương, nổ phạm vi<br>
+                        <strong>Chiêu thường:</strong> Lửa - x2 sát thương
+                    </div>
+                </div>
+
+                <div class="character-card" data-character="3">
+                    <div class="character-name">❄️ UFO - ICE</div>
+                    <div class="character-ability">
+                        <strong>Chiêu đặc biệt:</strong> Băng tuyết - Đóng băng 3s<br>
+                        <strong>Chiêu thường:</strong> Băng - Đóng băng 1.5s
+                    </div>
+                </div>
+            </div>
+
+            <button class="start-button" id="confirmCharacterBtn" disabled>XÁC NHẬN</button>
+        </div>
+
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Game UI -->
+        <div id="gameUI">
+            <div id="topBar">
+                <div id="statsDisplay">
+                    🏆 Kills: 0 | 💀 Deaths: 0 | Rank: #1/1
+                </div>
+                <div id="timerDisplay">⏱️ 10:00</div>
+            </div>
+
+            <div id="healthBar">
+                <div id="healthFill"></div>
+            </div>
+            <div id="armorBar">
+                <div id="armorFill"></div>
+            </div>
+            <div id="cooldownDisplay">
+                Chiêu thường: ✓ | Chiêu đặc biệt: ✓
+            </div>
+
+            <!-- Virtual Joystick -->
+            <div class="virtual-joystick" id="joystick">
+                <div class="joystick-base">
+                    <div class="joystick-stick" id="joystickStick"></div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls-right">
+                <div class="special-button" id="specialButton">CHIÊU<br>ĐẶC<br>BIỆT</div>
+                <div class="shoot-button" id="shootButton">BẮN</div>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen">
+            <div class="game-over-content">
+                <div class="game-over-title">KẾT THÚC TRẬN ĐẤU!</div>
+                <div class="leaderboard" id="leaderboardDisplay"></div>
+                <button class="restart-button" id="backToLobbyBtn">VỀ LOBBY</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>
+
