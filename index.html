@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sky Shooter - Boss Battle</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            background: #1a1a2e;
+            touch-action: none;
+        }
+
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            background: #1a1a2e;
+        }
+
+        /* Game UI */
+        #gameUI {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #healthBar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 250px;
+            height: 30px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 15px;
+            overflow: hidden;
+            border: 3px solid white;
+        }
+
+        #healthFill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b 0%, #ee5a6f 100%);
+            transition: width 0.3s;
+        }
+
+        #bossHealthBar {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 40px;
+            background: rgba(0,0,0,0.9);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 4px solid #ff0000;
+            display: none;
+        }
+
+        #bossHealthFill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000 0%, #ff6b00 50%, #ffaa00 100%);
+            transition: width 0.3s;
+        }
+
+        #bossHealthText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+
+        #bossTimer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,0,0,0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        #powerUpIndicator {
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            background: rgba(255,215,0,0.9);
+            color: #000;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 18px;
+            display: none;
+            border: 3px solid #fff;
+        }
+
+        /* Virtual Controls */
+        .virtual-joystick {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 150px;
+            height: 150px;
+            pointer-events: auto;
+        }
+
+        .joystick-base {
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.2);
+            border: 3px solid rgba(255,255,255,0.5);
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .joystick-stick {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.8);
+            border: 3px solid white;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.1s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .shoot-button {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: 4px solid white;
+            border-radius: 50%;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            user-select: none;
+        }
+
+        .shoot-button:active {
+            transform: scale(0.9);
+        }
+
+        .notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95);
+            color: #ffd700;
+            padding: 30px 50px;
+            border-radius: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            z-index: 9999;
+            display: none;
+            border: 4px solid #ffd700;
+            text-align: center;
+        }
+
+        .screen-shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0); }
+            10%, 30%, 50%, 70%, 90% { transform: translate(-10px, -10px); }
+            20%, 40%, 60%, 80% { transform: translate(10px, 10px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="gameUI">
+            <div id="healthBar">
+                <div id="healthFill"></div>
+            </div>
+
+            <div id="bossHealthBar">
+                <div id="bossHealthFill"></div>
+                <div id="bossHealthText">BOSS: 100/100</div>
+            </div>
+
+            <div id="bossTimer">Boss xuất hiện sau: 2:00</div>
+
+            <div id="powerUpIndicator">
+                ⭐ POWER UP ACTIVE! ⭐<br>
+                <span id="powerUpTime">10s</span>
+            </div>
+
+            <div class="virtual-joystick" id="joystick">
+                <div class="joystick-base">
+                    <div class="joystick-stick" id="joystickStick"></div>
+                </div>
+            </div>
+
+            <div class="shoot-button" id="shootButton">BẮN</div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const WORLD_WIDTH = 3000;
+        const WORLD_HEIGHT = 2000;
+
+        let camera = { x: 0, y: 0 };
+        let cameraShake = { x: 0, y: 0, intensity: 0 };
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Load images
+        const playerImg = new Image();
+        playerImg.src = 'https://pfst.cf2.poecdn.net/base/image/9fa1da8cd2232199c07084f9e27a5ac4a64ff5bc862a5502063611ebc298e8d5?w=358&h=218';
+
+        const bossImg = new Image();
+        bossImg.src = 'https://pfst.cf2.poecdn.net/base/image/b5656b9b4db12cfffb76917be16d258f1bb4b82f8ee943d9dc56759f8d6b8354?w=650&h=693';
+
+        const bgImg = new Image();
+        bgImg.src = 'https://pfst.cf2.poecdn.net/base/image/7f353029f5c4ef28f24de395cdbeba5829a9a10fe4a9611fc1cf21e205800c8b?w=1024&h=1024';
+
+        // Player - TĂNG TốC ĐỘ DI CHUYỂN
+        const player = {
+            x: WORLD_WIDTH / 2,
+            y: WORLD_HEIGHT / 2,
+            vx: 0,
+            vy: 0,
+            speed: 8,  // ĐÃ TĂNG TỐC ĐỘ TỪ 5 LÊN 8 (tăng 60%)
+            size: 60,
+            health: 100,
+            maxHealth: 100,
+            facingLeft: false
+        };
+
+        // Boss system
+        let boss = null;
+        let bossTimer = 120000; // 2 minutes in milliseconds
+        let lastBossTime = Date.now();
+        let bossActive = false;
+
+        // Power-up system
+        let powerUpActive = false;
+        let powerUpEndTime = 0;
+
+        // Bullets
+        let playerBullets = [];
+        let bossBullets = [];
+
+        // Particles
+        let particles = [];
+
+        // Controls
+        let joystickActive = false;
+        let joystickAngle = 0;
+        let joystickDistance = 0;
+        let isShooting = false;
+        let lastShootTime = 0;
+
+        // Items
+        let items = [];
+
+        // Setup controls
+        const joystick = document.getElementById('joystick');
+        const shootButton = document.getElementById('shootButton');
+
+        joystick.addEventListener('touchstart', handleJoystickStart);
+        joystick.addEventListener('touchmove', handleJoystickMove);
+        joystick.addEventListener('touchend', handleJoystickEnd);
+
+        // Mouse controls for desktop
+        joystick.addEventListener('mousedown', handleJoystickStart);
+        joystick.addEventListener('mousemove', handleJoystickMove);
+        joystick.addEventListener('mouseup', handleJoystickEnd);
+        document.addEventListener('mouseup', handleJoystickEnd);
+
+        shootButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isShooting = true;
+        });
+        shootButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isShooting = false;
+        });
+
+        // Mouse shooting
+        shootButton.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isShooting = true;
+        });
+        shootButton.addEventListener('mouseup', (e) => {
+            e.preventDefault();
+            isShooting = false;
+        });
+
+        function handleJoystickStart(e) {
+            e.preventDefault();
+            joystickActive = true;
+        }
+
+        function handleJoystickMove(e) {
+            e.preventDefault();
+            if (!joystickActive) return;
+
+            const rect = e.currentTarget.getBoundingClientRect();
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+
+            let clientX, clientY;
+            if (e.touches && e.touches[0]) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            const x = clientX - rect.left - centerX;
+            const y = clientY - rect.top - centerY;
+
+            const distance = Math.min(Math.sqrt(x * x + y * y), 45);
+            const angle = Math.atan2(y, x);
+
+            joystickDistance = distance / 45;
+            joystickAngle = angle;
+
+            const stickX = Math.cos(angle) * distance;
+            const stickY = Math.sin(angle) * distance;
+
+            document.getElementById('joystickStick').style.transform =
+                `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+        }
+
+        function handleJoystickEnd(e) {
+            e.preventDefault();
+            joystickActive = false;
+            joystickDistance = 0;
+            document.getElementById('joystickStick').style.transform = 'translate(-50%, -50%)';
+        }
+
+        // Create boss
+        function createBoss() {
+            boss = {
+                x: Math.random() * (WORLD_WIDTH - 400) + 200,
+                y: Math.random() * (WORLD_HEIGHT - 400) + 200,
+                vx: 0,
+                vy: 0,
+                size: 150,
+                health: 100,
+                maxHealth: 100,
+                lastShootTime: 0,
+                shootInterval: 2000,
+                moveTimer: 0,
+                targetX: 0,
+                targetY: 0
+            };
+            bossActive = true;
+            document.getElementById('bossHealthBar').style.display = 'block';
+            showNotification('⚠️ BOSS XUẤT HIỆN! ⚠️');
+            shakeScreen(30);
+        }
+
+        // Boss AI
+        function updateBoss(dt) {
+            if (!boss) return;
+
+            // Random movement
+            boss.moveTimer -= dt;
+            if (boss.moveTimer <= 0) {
+                boss.targetX = Math.random() * (WORLD_WIDTH - 400) + 200;
+                boss.targetY = Math.random() * (WORLD_HEIGHT - 400) + 200;
+                boss.moveTimer = 3000 + Math.random() * 2000;
+            }
+
+            // Move towards target
+            const dx = boss.targetX - boss.x;
+            const dy = boss.targetY - boss.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 10) {
+                boss.vx = (dx / dist) * 2;
+                boss.vy = (dy / dist) * 2;
+            } else {
+                boss.vx *= 0.95;
+                boss.vy *= 0.95;
+            }
+
+            boss.x += boss.vx;
+            boss.y += boss.vy;
+
+            // Keep in bounds
+            boss.x = Math.max(boss.size, Math.min(WORLD_WIDTH - boss.size, boss.x));
+            boss.y = Math.max(boss.size, Math.min(WORLD_HEIGHT - boss.size, boss.y));
+
+            // Shooting - 4 tia đạn + laser
+            const now = Date.now();
+            if (now - boss.lastShootTime > boss.shootInterval) {
+                bossShoot();
+                boss.lastShootTime = now;
+                shakeScreen(15);
+            }
+
+            // Update boss health bar
+            const healthPercent = (boss.health / boss.maxHealth) * 100;
+            document.getElementById('bossHealthFill').style.width = healthPercent + '%';
+            document.getElementById('bossHealthText').textContent = `BOSS: ${Math.ceil(boss.health)}/${boss.maxHealth}`;
+
+            // Check if boss is dead
+            if (boss.health <= 0) {
+                killBoss();
+            }
+        }
+
+        // Boss shooting pattern
+        function bossShoot() {
+            // 4 tia đạn theo 4 hướng
+            for (let i = 0; i < 4; i++) {
+                const angle = (Math.PI / 2) * i + (Date.now() / 1000);
+                createBossBullet(boss.x, boss.y, angle, 'bullet');
+            }
+
+            // Thêm laser beam (nhiều viên đạn theo một hướng)
+            const laserAngle = Math.atan2(player.y - boss.y, player.x - boss.x);
+            for (let i = 0; i < 8; i++) {
+                setTimeout(() => {
+                    if (boss) {
+                        createBossBullet(boss.x, boss.y, laserAngle + (Math.random() - 0.5) * 0.3, 'laser');
+                    }
+                }, i * 50);
+            }
+        }
+
+        function createBossBullet(x, y, angle, type) {
+            const speed = type === 'laser' ? 8 : 5;
+            bossBullets.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: type === 'laser' ? 12 : 8,
+                type: type
+            });
+        }
+
+        function killBoss() {
+            // Create explosion particles
+            for (let i = 0; i < 100; i++) {
+                particles.push({
+                    x: boss.x,
+                    y: boss.y,
+                    vx: (Math.random() - 0.5) * 20,
+                    vy: (Math.random() - 0.5) * 20,
+                    life: 100,
+                    color: ['#ff0000', '#ff6b00', '#ffaa00', '#ffd700'][Math.floor(Math.random() * 4)]
+                });
+            }
+
+            // Drop power-up items
+            for (let i = 0; i < 5; i++) {
+                items.push({
+                    x: boss.x + (Math.random() - 0.5) * 200,
+                    y: boss.y + (Math.random() - 0.5) * 200,
+                    type: ['health', 'speed', 'damage'][Math.floor(Math.random() * 3)],
+                    id: Date.now() + i
+                });
+            }
+
+            boss = null;
+            bossActive = false;
+            document.getElementById('bossHealthBar').style.display = 'none';
+            lastBossTime = Date.now();
+
+            showNotification('🎉 BOSS BỊ TIÊU DIỆT! 🎉');
+            shakeScreen(50);
+
+            // Activate power-up
+            activatePowerUp();
+        }
+
+        function activatePowerUp() {
+            powerUpActive = true;
+            powerUpEndTime = Date.now() + 10000; // 10 seconds
+            document.getElementById('powerUpIndicator').style.display = 'block';
+
+            // Enhanced stats during power-up
+            player.speed = 12;
+        }
+
+        // Screen shake effect
+        function shakeScreen(intensity) {
+            cameraShake.intensity = intensity;
+        }
+
+        function updateCameraShake() {
+            if (cameraShake.intensity > 0) {
+                cameraShake.x = (Math.random() - 0.5) * cameraShake.intensity;
+                cameraShake.y = (Math.random() - 0.5) * cameraShake.intensity;
+                cameraShake.intensity *= 0.9;
+
+                if (cameraShake.intensity < 0.5) {
+                    cameraShake.intensity = 0;
+                    cameraShake.x = 0;
+                    cameraShake.y = 0;
+                }
+            }
+        }
+
+        // Update player
+        function updatePlayer(dt) {
+            if (joystickActive) {
+                player.vx = Math.cos(joystickAngle) * joystickDistance * player.speed;
+                player.vy = Math.sin(joystickAngle) * joystickDistance * player.speed;
+
+                if (player.vx < -0.5) {
+                    player.facingLeft = true;
+                } else if (player.vx > 0.5) {
+                    player.facingLeft = false;
+                }
+            } else {
+                player.vx *= 0.9;
+                player.vy *= 0.9;
+            }
+
+            player.x += player.vx;
+            player.y += player.vy;
+
+            player.x = Math.max(50, Math.min(WORLD_WIDTH - 50, player.x));
+            player.y = Math.max(50, Math.min(WORLD_HEIGHT - 50, player.y));
+
+            // Shooting
+            const fireRate = powerUpActive ? 100 : 300;
+            if (isShooting && Date.now() - lastShootTime > fireRate) {
+                shootBullet();
+                lastShootTime = Date.now();
+            }
+
+            // Update health bar
+            const healthPercent = (player.health / player.maxHealth) * 100;
+            document.getElementById('healthFill').style.width = healthPercent + '%';
+        }
+
+        function shootBullet() {
+            const angle = player.facingLeft ? Math.PI : 0;
+            const damage = powerUpActive ? 2 : 1;
+
+            playerBullets.push({
+                x: player.x,
+                y: player.y,
+                vx: Math.cos(angle) * 10,
+                vy: 0,
+                size: 8,
+                damage: damage
+            });
+        }
+
+        // Update bullets
+        function updateBullets(dt) {
+            // Player bullets
+            playerBullets = playerBullets.filter(bullet => {
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+
+                // Check collision with boss
+                if (boss) {
+                    const dx = bullet.x - boss.x;
+                    const dy = bullet.y - boss.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < boss.size / 2) {
+                        boss.health -= bullet.damage;
+                        createParticles(bullet.x, bullet.y, '#ffff00', 10);
+                        return false;
+                    }
+                }
+
+                return bullet.x > 0 && bullet.x < WORLD_WIDTH &&
+                       bullet.y > 0 && bullet.y < WORLD_HEIGHT;
+            });
+
+            // Boss bullets
+            bossBullets = bossBullets.filter(bullet => {
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+
+                // Check collision with player
+                const dx = bullet.x - player.x;
+                const dy = bullet.y - player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < player.size / 2) {
+                    const damage = powerUpActive ? 2 : 5;
+                    player.health -= damage;
+                    createParticles(bullet.x, bullet.y, '#ff0000', 10);
+                    return false;
+                }
+
+                return bullet.x > 0 && bullet.x < WORLD_WIDTH &&
+                       bullet.y > 0 && bullet.y < WORLD_HEIGHT;
+            });
+        }
+
+        // Update items
+        function updateItems(dt) {
+            items = items.filter(item => {
+                const dx = player.x - item.x;
+                const dy = player.y - item.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < 40) {
+                    pickupItem(item);
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function pickupItem(item) {
+            switch (item.type) {
+                case 'health':
+                    player.health = Math.min(player.maxHealth, player.health + 20);
+                    showNotification('💚 +20 HP');
+                    break;
+                case 'speed':
+                    player.speed += 1;
+                    showNotification('⚡ Tốc độ tăng!');
+                    break;
+                case 'damage':
+                    showNotification('🔥 Sát thương tăng!');
+                    break;
+            }
+        }
+
+        // Update particles
+        function updateParticles(dt) {
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2; // gravity
+                p.life -= 2;
+            });
+            particles = particles.filter(p => p.life > 0);
+        }
+
+        function createParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 100,
+                    color: color
+                });
+            }
+        }
+
+        // Update camera
+        function updateCamera() {
+            camera.x = player.x - canvas.width / 2;
+            camera.y = player.y - canvas.height / 2;
+
+            camera.x = Math.max(0, Math.min(WORLD_WIDTH - canvas.width, camera.x));
+            camera.y = Math.max(0, Math.min(WORLD_HEIGHT - canvas.height, camera.y));
+        }
+
+        // Update timers
+        function updateTimers(dt) {
+            // Boss timer
+            if (!bossActive) {
+                const elapsed = Date.now() - lastBossTime;
+                const remaining = Math.max(0, bossTimer - elapsed);
+
+                if (remaining === 0) {
+                    createBoss();
+                } else {
+                    const minutes = Math.floor(remaining / 60000);
+                    const seconds = Math.floor((remaining % 60000) / 1000);
+                    document.getElementById('bossTimer').textContent =
+                        `Boss xuất hiện sau: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                }
+            } else {
+                document.getElementById('bossTimer').textContent = 'BOSS ĐANG CHIẾN ĐẤU!';
+            }
+
+            // Power-up timer
+            if (powerUpActive) {
+                const remaining = Math.max(0, powerUpEndTime - Date.now());
+
+                if (remaining === 0) {
+                    powerUpActive = false;
+                    player.speed = 8; // Reset speed
+                    document.getElementById('powerUpIndicator').style.display = 'none';
+                } else {
+                    const seconds = Math.ceil(remaining / 1000);
+                    document.getElementById('powerUpTime').textContent = `${seconds}s`;
+                }
+            }
+        }
+
+        // Render
+        function render() {
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw background
+            const bgScale = 0.5;
+            const bgX = -camera.x * bgScale + cameraShake.x;
+            const bgY = -camera.y * bgScale + cameraShake.y;
+
+            if (bgImg.complete) {
+                const pattern = ctx.createPattern(bgImg, 'repeat');
+                ctx.save();
+                ctx.translate(bgX % bgImg.width, bgY % bgImg.height);
+                ctx.fillStyle = pattern;
+                ctx.fillRect(-bgImg.width, -bgImg.height,
+                            canvas.width + bgImg.width * 2,
+                            canvas.height + bgImg.height * 2);
+                ctx.restore();
+            }
+
+            ctx.save();
+            ctx.translate(-camera.x + cameraShake.x, -camera.y + cameraShake.y);
+
+            // Draw particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 100;
+                ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+            });
+            ctx.globalAlpha = 1;
+
+            // Draw items
+            items.forEach(item => {
+                let color, emoji;
+                switch (item.type) {
+                    case 'health':
+                        color = '#00ff00';
+                        emoji = '💚';
+                        break;
+                    case 'speed':
+                        color = '#ffff00';
+                        emoji = '⚡';
+                        break;
+                    case 'damage':
+                        color = '#ff0000';
+                        emoji = '🔥';
+                        break;
+                }
+
+                ctx.fillStyle = color;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(item.x, item.y, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(emoji, item.x, item.y + 8);
+            });
+
+            // Draw player
+            if (playerImg.complete) {
+                ctx.save();
+                ctx.translate(player.x, player.y);
+                if (player.facingLeft) {
+                    ctx.scale(-1, 1);
+                }
+                ctx.drawImage(playerImg, -player.size/2, -player.size/2, player.size, player.size);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(player.x - player.size/2, player.y - player.size/2, player.size, player.size);
+            }
+
+            // Draw boss
+            if (boss && bossImg.complete) {
+                ctx.save();
+                ctx.translate(boss.x, boss.y);
+                ctx.drawImage(bossImg, -boss.size/2, -boss.size/2, boss.size, boss.size);
+                ctx.restore();
+
+                // Boss health bar above boss
+                const barWidth = 120;
+                const barHeight = 10;
+                const healthPercent = boss.health / boss.maxHealth;
+
+                ctx.fillStyle = '#000';
+                ctx.fillRect(boss.x - barWidth/2, boss.y - boss.size/2 - 30, barWidth, barHeight);
+
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(boss.x - barWidth/2, boss.y - boss.size/2 - 30, barWidth * healthPercent, barHeight);
+            } else if (boss) {
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(boss.x - boss.size/2, boss.y - boss.size/2, boss.size, boss.size);
+            }
+
+            // Draw player bullets
+            playerBullets.forEach(bullet => {
+                ctx.fillStyle = powerUpActive ? '#ffd700' : '#ffff00';
+                ctx.shadowColor = powerUpActive ? '#ffd700' : '#ffff00';
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // Draw boss bullets
+            bossBullets.forEach(bullet => {
+                if (bullet.type === 'laser') {
+                    ctx.fillStyle = '#ff00ff';
+                    ctx.shadowColor = '#ff00ff';
+                } else {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.shadowColor = '#ff0000';
+                }
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            ctx.restore();
+        }
+
+        // Show notification
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // Game loop
+        let lastTime = Date.now();
+        function gameLoop() {
+            const now = Date.now();
+            const dt = now - lastTime;
+            lastTime = now;
+
+            updatePlayer(dt);
+            updateBoss(dt);
+            updateBullets(dt);
+            updateItems(dt);
+            updateParticles(dt);
+            updateCamera();
+            updateCameraShake();
+            updateTimers(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        gameLoop();
+    </script>
+</body>
+</html>
+
